@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tee Time Windows</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, clubhouse-formal, a working tool first.
+   IDEA: the starter's board by the first tee — names, windows, a clock.
+   PICTURE: big live countdowns, one card per course, at the top.
+   COLOUR and TYPE: pine green field, white card stock, a brass accent; Caslon numerals + Inter.
+   LAYOUT: modest title, countdown cards, then reminder form in one column, settings tucked below. */
+:root{color-scheme:light dark;--bg:light-dark(#f4f2ea,#0e1a14);--field:light-dark(#1d4a33,#12301f);--card:light-dark(#ffffff,#18261e);--ink:light-dark(#15201a,#ecefe9);--mute:light-dark(#56635a,#a6b3aa);--rule:light-dark(#dcd8ca,#2b3b31);--brass:light-dark(#a8781f,#d8ab52);--ok:light-dark(#1d6b43,#6fcf97)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(24px,4vw,56px) max(5vw,16px)}
+.wrap{max-width:1000px;margin:0 auto}
+header.band{background:var(--field);color:#f4f2ea;padding-bottom:clamp(70px,8vw,96px)}
+h1{font:700 clamp(32px,5vw,46px)/1.05 "Libre Caslon Text",Georgia,serif;margin:0 0 8px;text-wrap:balance}
+header p{margin:0;opacity:.85}
+#now{font-variant-numeric:tabular-nums}
+.boards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px;margin-top:-64px}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:22px;box-shadow:0 10px 30px -18px #0007}
+.card h2{font:700 24px/1.1 "Libre Caslon Text",Georgia,serif;margin:0}
+.rule{color:var(--mute);font-size:14px;margin:4px 0 16px}
+.lbl{font-size:13px;color:var(--mute);margin:0}
+.big{font:700 clamp(40px,8vw,54px)/1 "Libre Caslon Text",Georgia,serif;font-variant-numeric:tabular-nums;color:var(--ink);margin:6px 0 4px;white-space:nowrap}
+.big small{font-size:.45em;color:var(--mute);font-weight:400;margin:0 6px 0 2px}
+.unl{margin:0 0 14px}.unl b{color:var(--brass)}
+.open{border-top:1px solid var(--rule);padding-top:12px;font-size:15px}
+.open b{color:var(--ok)}
+h3{font:700 26px/1.1 "Libre Caslon Text",Georgia,serif;margin:0 0 6px}
+form{display:grid;gap:14px;max-width:560px}
+label{display:grid;gap:6px;font-weight:500;font-size:15px}
+input,select,button{font:inherit;font-size:16px;min-height:46px;border-radius:10px;border:1px solid var(--rule);background:var(--card);color:var(--ink);padding:0 12px}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+button,.btn{background:var(--field);color:#f4f2ea;border:0;font-weight:600;cursor:pointer;padding:0 18px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;min-height:46px;border-radius:10px}
+.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--rule)}
+#out{margin-top:18px;max-width:560px}
+.res{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:18px}
+.res .when{font:700 22px/1.2 "Libre Caslon Text",Georgia,serif;margin:4px 0 10px}
+.acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.note{font-size:14px;color:var(--mute)}
+details{margin-top:8px}summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+.set{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1.2fr) 46px;gap:8px;align-items:end;margin-bottom:10px}
+.set button{padding:0;background:transparent;color:var(--mute);border:1px solid var(--rule)}
+@media(max-width:600px){.set{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.set label:first-child{grid-column:1/-1}}
+@media(prefers-reduced-motion:no-preference){.tick{animation:t .4s ease}@keyframes t{from{opacity:.55}to{opacity:1}}}
+</style>
+</head>
+<body>
+<header class="band"><div class="wrap">
+  <h1>Tee time windows</h1>
+  <p>Pinehurst booking openings, live. <span id="now"></span></p>
+</div></header>
+
+<main class="band" style="padding-top:0"><div class="wrap">
+  <section class="boards" id="boards" aria-live="off"></section>
+
+  <section style="margin-top:44px">
+    <h3>Remind me to run the bot</h3>
+    <p class="note" style="margin:0 0 16px">Pick the day you want to play. You'll get the date and time that day's tee sheet opens, and a calendar alert one hour before it.</p>
+    <form id="f">
+      <label>Course
+        <select id="fc"></select></label>
+      <label>Day you want to play
+        <input type="date" id="fd" required></label>
+      <label>Your email (adds you as a guest on the Google Calendar event)
+        <input type="email" id="fe" placeholder="you@example.com" autocomplete="email"></label>
+      <button type="submit">Set my reminder</button>
+    </form>
+    <div id="out"></div>
+  </section>
+
+  <section style="margin-top:44px">
+    <details>
+      <summary>Edit courses and opening times</summary>
+      <p class="note">Days = how far ahead you can book. Time = when the new day opens each morning. Saved in this browser.</p>
+      <div id="sets"></div>
+      <div class="acts"><button type="button" class="btn alt" id="add">Add a course</button><button type="button" id="save">Save</button></div>
+    </details>
+  </section>
+</div></main>
+
+<script>
+{
+const KEY='teeWindows.v2';
+const DEF=[{name:'Pinehurst — with a guest',days:30,time:'22:00'},{name:'The Cradle',days:2,time:'22:00'}];
+let courses=DEF;
+try{const s=JSON.parse(localStorage.getItem(KEY));if(Array.isArray(s)&&s.length)courses=s}catch(e){}
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const atTime=(d,t)=>{const [h,m]=t.split(':').map(Number);const x=new Date(d);x.setHours(h,m,0,0);return x};
+const fDate=d=>d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+const fLong=d=>d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+const fTime=d=>d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+
+function state(c,now){
+  const today=new Date(now);today.setHours(0,0,0,0);
+  const openToday=atTime(today,c.time);
+  if(now>=openToday) return {through:addDays(today,c.days),next:atTime(addDays(today,1),c.time),unlocks:addDays(today,1+c.days)};
+  return {through:addDays(today,c.days-1),next:openToday,unlocks:addDays(today,c.days)};
+}
+
+function boards(){
+  const now=new Date();
+  $('now').textContent='Now: '+fDate(now)+', '+now.toLocaleTimeString();
+  $('boards').innerHTML=courses.map(c=>{
+    const s=state(c,now);let ms=s.next-now;
+    const h=Math.floor(ms/36e5);ms-=h*36e5;const m=Math.floor(ms/6e4);ms-=m*6e4;const sec=Math.floor(ms/1e3);
+    return `<article class="card"><h2>${esc(c.name)}</h2>
+      <p class="rule">Books ${c.days} day${c.days==1?'':'s'} out · opens ${esc(fTime(atTime(now,c.time)))}</p>
+      <p class="lbl">Next day opens in</p>
+      <div class="big">${h}<small>h</small>${pad(m)}<small>m</small>${pad(sec)}<small>s</small></div>
+      <p class="unl">Unlocks <b>${esc(fDate(s.unlocks))}</b> at ${esc(fTime(s.next))} ${s.next.toDateString()===now.toDateString()?'today':'tomorrow'}</p>
+      <p class="open">Open right now: through <b>${esc(fDate(s.through))}</b></p></article>`}).join('');
+}
+
+function fillSelect(){$('fc').innerHTML=courses.map((c,i)=>`<option value="${i}">${esc(c.name)} (${c.days} days)</option>`).join('')}
+
+const utc=d=>d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate())+'T'+pad(d.getUTCHours())+pad(d.getUTCMinutes())+'00Z';
+
+let lastIcs=null;
+$('f').addEventListener('submit',e=>{
+  e.preventDefault();
+  const c=courses[+$('fc').value];const v=$('fd').value;if(!v)return;
+  const [y,mo,da]=v.split('-').map(Number);const play=new Date(y,mo-1,da);
+  const opens=atTime(addDays(play,-c.days),c.time);const remind=new Date(opens-36e5);const now=new Date();
+  const title=`Run tee time bot — ${c.name} for ${fDate(play)}`;
+  const det=`Booking for ${fLong(play)} opens at ${fTime(opens)} on ${fLong(opens)}. Log in first (captcha), then start the bot.`;
+  const email=$('fe').value.trim();
+  const g='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title)+'&dates='+utc(remind)+'/'+utc(opens)+'&details='+encodeURIComponent(det)+(email?'&add='+encodeURIComponent(email):'');
+  lastIcs=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//teewindows//EN','BEGIN:VEVENT','UID:'+Date.now()+'@teewindows','DTSTAMP:'+utc(now),'DTSTART:'+utc(remind),'DTEND:'+utc(opens),'SUMMARY:'+title.replace(/[,;]/g,'\\$&'),'DESCRIPTION:'+det.replace(/[,;]/g,'\\$&'),'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+title.replace(/[,;]/g,'\\$&'),'TRIGGER:PT0M','END:VALARM','BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Booking opens now','TRIGGER;RELATED=END:PT0M','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
+  let msg;
+  if(opens<=now) msg=`<p class="note">That day is already open to book — run the bot now.</p>`;
+  else if(remind<=now) msg=`<p class="note">Less than an hour to go — booking opens at ${esc(fTime(opens))}.</p>`;
+  else msg='';
+  $('out').innerHTML=`<div class="res"><p class="lbl">To play ${esc(fLong(play))}, booking opens</p>
+    <div class="when">${esc(fLong(opens))} at ${esc(fTime(opens))}</div>
+    <p style="margin:0">Reminder: <b>${esc(fTime(remind))}</b> that morning, one hour before.</p>${msg}
+    <div class="acts"><a class="btn" href="${esc(g)}" target="_blank" rel="noopener">Add to Google Calendar</a>
+    <button type="button" class="btn alt" id="ics" hidden>Download for iPhone Calendar</button></div>
+    <p class="note" id="icsmsg">${email?'Google Calendar will email an invite to '+esc(email)+'. Save it there so the alert fires.':''}</p></div>`;
+  wireIcs();
+});
+
+function wireIcs(){
+  const b=$('ics');if(!b)return;b.hidden=false;
+  b.onclick=()=>{const u=URL.createObjectURL(new Blob([lastIcs],{type:'text/calendar'}));const a=document.createElement('a');a.href=u;a.download='tee-time-reminder.ics';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);$('icsmsg').textContent='Tap the downloaded file to add it to your calendar.'};
+}
+
+function renderSets(){
+  $('sets').innerHTML=courses.map((c,i)=>`<div class="set">
+    <label>Course<input data-i="${i}" data-k="name" value="${esc(c.name)}"></label>
+    <label>Days<input data-i="${i}" data-k="days" type="number" min="0" max="365" value="${c.days}"></label>
+    <label>Time<input data-i="${i}" data-k="time" type="time" value="${esc(c.time)}"></label>
+    <button type="button" aria-label="Remove ${esc(c.name)}" data-del="${i}">✕</button></div>`).join('');
+}
+$('sets').addEventListener('input',e=>{const t=e.target,i=t.dataset.i;if(i==null)return;courses[i][t.dataset.k]=t.dataset.k==='days'?Math.max(0,+t.value||0):t.value});
+$('sets').addEventListener('click',e=>{const d=e.target.dataset.del;if(d==null||courses.length<2)return;courses.splice(+d,1);renderSets()});
+$('add').onclick=()=>{courses.push({name:'New course',days:7,time:'22:00'});renderSets()};
+$('save').onclick=()=>{courses=courses.filter(c=>c.name&&/^\d\d:\d\d$/.test(c.time));try{localStorage.setItem(KEY,JSON.stringify(courses))}catch(e){}fillSelect();boards();$('save').textContent='Saved';setTimeout(()=>$('save').textContent='Save',1500)};
+
+const tmr=addDays(new Date(),3);$('fd').value=tmr.getFullYear()+'-'+pad(tmr.getMonth()+1)+'-'+pad(tmr.getDate());
+fillSelect();renderSets();boards();setInterval(boards,1000);
+}
+</script>
+</body>
+</html>
